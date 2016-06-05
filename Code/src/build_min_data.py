@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from pandas import read_csv
+from pandas import read_csv, DataFrame
+import numpy as np
 from os import path
 
 CURRENT_DIR = path.dirname(path.abspath(__file__))
@@ -32,3 +33,30 @@ ratings = data[data.movieId.isin(most_rated_movies) & data.userId.isin(users_wit
 rating_min_filename = path.join(DATA_DIR, 'ratings_min.csv')
 print "Saving file to %s" % rating_min_filename
 ratings.to_csv(rating_min_filename, index=False)
+
+# Save matrix data
+print "Creating matrix data"
+userIds = sorted(ratings.userId.unique())
+movieIds = sorted(ratings.movieId.unique())
+matrix = DataFrame([[np.nan] * len(userIds) for i in xrange(len(movieIds))], columns=userIds, index=movieIds)  # initialize matrix with nan values
+
+# Fill matrix
+i = 0
+rows = ratings.iterrows()
+percentage_10 = len(ratings) / 10
+percentage_done = 0
+for row in rows:
+    userId = row[1].userId
+    movieId = row[1].movieId
+    rating = row[1].rating
+
+    matrix.ix[movieId, userId] = rating
+
+    if i == percentage_done * percentage_10:
+        print "{0:.0f}% done".format(percentage_done * 10)
+        percentage_done += 1
+    i += 1
+
+matrix_filename = path.join(DATA_DIR, 'matrix.csv')
+print "Saving matrix file to %s" % matrix_filename
+matrix.to_csv(matrix_filename)
