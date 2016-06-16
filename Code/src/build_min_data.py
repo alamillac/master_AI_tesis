@@ -38,7 +38,7 @@ ratings.to_csv(rating_min_filename, index=False)
 print "Creating matrix data"
 userIds = sorted(ratings.userId.unique())
 movieIds = sorted(ratings.movieId.unique())
-matrix = DataFrame([[np.nan] * len(userIds) for i in xrange(len(movieIds))], columns=userIds, index=movieIds)  # initialize matrix with nan values
+matrix = DataFrame([[np.nan] * len(movieIds) for i in xrange(len(userIds))], columns=movieIds, index=userIds)  # initialize matrix with nan values
 
 # Fill matrix
 i = 0
@@ -50,7 +50,7 @@ for row in rows:
     movieId = row[1].movieId
     rating = row[1].rating
 
-    matrix.ix[movieId, userId] = rating
+    matrix.ix[userId, movieId] = rating
 
     if i == percentage_done * percentage_10:
         print "{0:.0f}% done".format(percentage_done * 10)

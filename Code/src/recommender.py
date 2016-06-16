@@ -13,7 +13,7 @@ class Recommender(object):
         # Read Data file
         print "Reading file: %s" % matrixFilename
         self.matrix = read_csv(matrixFilename, index_col=0, header=0)
-        import ipdb; ipdb.set_trace()  # BREAKPOINT  # TODO Revisar si el indexado es correcto self.matrix.loc[5,'768']
+        #import ipdb; ipdb.set_trace()  # BREAKPOINT  # TODO Revisar si el indexado es correcto self.matrix.loc[5,'768']
 
 
 if __name__ == '__main__':
