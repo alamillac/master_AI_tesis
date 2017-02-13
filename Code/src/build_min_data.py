@@ -1,62 +1,34 @@
 #!/usr/bin/env python
 
-from pandas import read_csv, DataFrame
-import numpy as np
 from os import path
+from datasetGenerator import DatasetGenerator
 
 CURRENT_DIR = path.dirname(path.abspath(__file__))
 DATA_DIR = path.join(CURRENT_DIR, '..', 'data')
 
 dataFilename = path.join(DATA_DIR, 'ratings.csv')
-print "Reading file: %s" % dataFilename
-data = read_csv(dataFilename)
 
-# Get the 1000 most rated movies
-print "Filtering 1000 most rated movies"
-size_most_rated_movies = data.groupby('movieId').size().sort_values(ascending=False).head(1000)
-most_rated_movies = size_most_rated_movies.index.values
+generator = DatasetGenerator(dataFilename, seed=1985)
 
-# Get all the ratings of 1000 most rated movies
-print "Getting ratings of 1000 most rated movies"
-ratings = data[data.movieId.isin(most_rated_movies)]
+# get sub datasets
+ratings_100 = generator.getDataset(percentage=1)
+ratings_55 = generator.getDataset(percentage=0.55)
+ratings_30 = generator.getDataset(percentage=0.3)
 
-# Get the 1000 users with more rated top 1000 movies
-print "Getting 1000 users with more rated movies"
-size_users_with_more_ratings = ratings.groupby('userId').size().sort_values(ascending=False).head(1000)
-users_with_more_ratings = size_users_with_more_ratings.index.values
+# get optimus dataset 60%
+import ipdb; ipdb.set_trace()  # BREAKPOINT
+ratings = generator.getOptimusDatasetPercentage(percentage=0.6)
 
-# Finally get the final ratings
-print "Getting output ratings"
-ratings = data[data.movieId.isin(most_rated_movies) & data.userId.isin(users_with_more_ratings)]
+# get optimus dataset
+ratings_opt = generator.getOptimusDataset(best_users=1000, best_movies=2000)
 
 # Save it
 rating_min_filename = path.join(DATA_DIR, 'ratings_min.csv')
 print "Saving file to %s" % rating_min_filename
-ratings.to_csv(rating_min_filename, index=False)
+ratings_opt.to_csv(rating_min_filename, index=False)
 
 # Save matrix data
-print "Creating matrix data"
-userIds = sorted(ratings.userId.unique())
-movieIds = sorted(ratings.movieId.unique())
-matrix = DataFrame([[np.nan] * len(movieIds) for i in xrange(len(userIds))], columns=movieIds, index=userIds)  # initialize matrix with nan values
-
-# Fill matrix
-i = 0
-rows = ratings.iterrows()
-percentage_10 = len(ratings) / 10
-percentage_done = 0
-for row in rows:
-    userId = row[1].userId
-    movieId = row[1].movieId
-    rating = row[1].rating
-
-    matrix.ix[userId, movieId] = rating
-
-    if i == percentage_done * percentage_10:
-        print "{0:.0f}% done".format(percentage_done * 10)
-        percentage_done += 1
-    i += 1
-
+matrix = generator.getMatrix(ratings_opt)
 matrix_filename = path.join(DATA_DIR, 'matrix.csv')
 print "Saving matrix file to %s" % matrix_filename
 matrix.to_csv(matrix_filename)
