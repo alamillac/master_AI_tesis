@@ -1,32 +1,35 @@
 from pandas import read_csv, DataFrame
 import numpy as np
 import random
+import logging
+
+logger = logging.getLogger('datasetGenerator')
 
 
 class DatasetGenerator(object):
     def __init__(self, filenameDataset, seed=None):
-        print "Reading file: %s" % filenameDataset
+        logger.debug("Reading file: %s" % filenameDataset)
         self.data = read_csv(filenameDataset)
         if seed:
             random.seed(seed)
 
     def getOptimusDataset(self, best_users=1000, best_movies=1000):
         # Get the (best_movies) most rated movies
-        print "Filtering %d most rated movies" % best_movies
+        logger.debug("Filtering %d most rated movies" % best_movies)
         size_most_rated_movies = self.data.groupby('movieId').size().sort_values(ascending=False).head(best_movies)
         most_rated_movies = size_most_rated_movies.index.values
 
         # Get all the ratings of (best_users) most rated movies
-        print "Getting ratings of %d most rated movies" % best_movies
+        logger.debug("Getting ratings of %d most rated movies" % best_movies)
         ratings = self.data[self.data.movieId.isin(most_rated_movies)]
 
         # Get the (best_users) users with more rated top (best_movies) movies
-        print "Getting %d users with more rated movies" % best_users
+        logger.debug("Getting %d users with more rated movies" % best_users)
         size_users_with_more_ratings = ratings.groupby('userId').size().sort_values(ascending=False).head(best_users)
         users_with_more_ratings = size_users_with_more_ratings.index.values
 
         # Finally get the final ratings
-        print "Getting output ratings"
+        logger.debug("Getting output ratings")
         ratings = self.data[self.data.movieId.isin(most_rated_movies) & self.data.userId.isin(users_with_more_ratings)]
         return ratings
 
@@ -62,7 +65,7 @@ class DatasetGenerator(object):
         return ratings
 
     def getMatrix(self, ratings):
-        print "Creating matrix data"
+        logger.debug("Creating matrix data")
         userIds = sorted(ratings.userId.unique())
         movieIds = sorted(ratings.movieId.unique())
         matrix = DataFrame([[np.nan] * len(movieIds) for i in xrange(len(userIds))], columns=movieIds, index=userIds)  # initialize matrix with nan values
@@ -80,8 +83,27 @@ class DatasetGenerator(object):
             matrix.ix[userId, movieId] = rating
 
             if i == percentage_done * percentage_10:
-                print "{0:.0f}% done".format(percentage_done * 10)
+                logger.debug("{0:.0f}% done".format(percentage_done * 10))
                 percentage_done += 1
             i += 1
 
         return matrix
+
+    def getStatsFromDataset(self, dataset):
+        num_users = len(dataset.userId.unique())
+        num_movies = len(dataset.movieId.unique())
+        count_ratings_by_users = dataset.groupby('userId')['rating'].count()
+        count_ratings_by_movies = dataset.groupby('movieId')['rating'].count()
+        return {
+            "numUsers": num_users,
+            "numMovies": num_movies,
+            "numRatings": len(dataset),
+            "meanRatingsByUsers": count_ratings_by_users.mean(),
+            "meanRatingsByMovies": count_ratings_by_movies.mean(),
+            "standardDeviationRatingsByUsers": count_ratings_by_users.std(),
+            "standardDeviationRatingsByMovies": count_ratings_by_movies.std(),
+            "countRatingsByUsers": count_ratings_by_users,
+            "countRatingsByMovies": count_ratings_by_movies,
+            "histRatingsByUsers": np.histogram(count_ratings_by_users),
+            "histRatingsByMovies": np.histogram(count_ratings_by_movies)
+        }
