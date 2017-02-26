@@ -23,16 +23,16 @@ generator = DatasetGenerator(dataFilename, seed=1985)
 
 # get sub datasets
 logger.debug("Generating dataset 100%")
-ratings_100 = generator.getDataset(percentage=1)
+ratings_100 = generator.getDatasetPercentage(percentage=1)
 logger.debug("Stats from dataset 100%")
 stats_100 = generator.getStatsFromDataset(ratings_100)
 
 #plt.hist(stats_100['countRatingsByUsers'])
 logger.debug("Generating dataset 55%")
-ratings_55 = generator.getDataset(percentage=0.55)
+ratings_55 = generator.getDatasetPercentage(percentage=0.55)
 
 logger.debug("Generating dataset 30%")
-ratings_30 = generator.getDataset(percentage=0.3)
+ratings_30 = generator.getDatasetPercentage(percentage=0.3)
 stats_30 = generator.getStatsFromDataset(ratings_30)
 
 # get optimus dataset 40%

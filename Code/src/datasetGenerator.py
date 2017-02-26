@@ -47,7 +47,7 @@ class DatasetGenerator(object):
         num_movies = n_samples(self.data.movieId.unique())
         return self.getOptimusDataset(best_users=num_users, best_movies=num_movies)
 
-    def getDataset(self, percentage=1):
+    def getDatasetPercentage(self, percentage=1):
         def n_samples(samples):
             return int(len(samples) * percentage)
 
@@ -59,8 +59,14 @@ class DatasetGenerator(object):
 
         user_ids = self.data.userId.unique()
         movie_ids = self.data.movieId.unique()
-        sample_user_ids = random.sample(user_ids, n_samples(user_ids))
-        sample_movie_ids = random.sample(movie_ids, n_samples(movie_ids))
+
+        return self.getDataset(n_samples(user_ids), n_samples(movie_ids))
+
+    def getDataset(self, num_users, num_movies):
+        user_ids = self.data.userId.unique()
+        movie_ids = self.data.movieId.unique()
+        sample_user_ids = random.sample(user_ids, num_users)
+        sample_movie_ids = random.sample(movie_ids, num_movies)
         ratings = self.data[self.data.movieId.isin(sample_movie_ids) & self.data.userId.isin(sample_user_ids)]
         return ratings
 
