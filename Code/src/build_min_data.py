@@ -21,6 +21,13 @@ dataFilename = path.join(DATA_DIR, 'ratings.csv')
 logger.debug("Opening database %s" % dataFilename)
 generator = DatasetGenerator(dataFilename, seed=1985)
 
+# Generate test dataset
+logger.debug("Generating test dataset")
+ratings_test = generator.getDataset(16, 10, True)
+rating_test_filename = path.join(DATA_DIR, 'ratings_test.csv')
+logger.debug("Saving test dataset file to %s" % rating_test_filename)
+ratings_test.to_csv(rating_test_filename, index=False)
+
 # get sub datasets
 logger.debug("Generating dataset 100%")
 ratings_100 = generator.getDatasetPercentage(percentage=1)

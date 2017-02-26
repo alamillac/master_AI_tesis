@@ -62,12 +62,29 @@ class DatasetGenerator(object):
 
         return self.getDataset(n_samples(user_ids), n_samples(movie_ids))
 
-    def getDataset(self, num_users, num_movies):
+    def getDataset(self, num_users, num_movies=None, more_rated_movies=None):
         user_ids = self.data.userId.unique()
-        movie_ids = self.data.movieId.unique()
         sample_user_ids = random.sample(user_ids, num_users)
-        sample_movie_ids = random.sample(movie_ids, num_movies)
-        ratings = self.data[self.data.movieId.isin(sample_movie_ids) & self.data.userId.isin(sample_user_ids)]
+
+        # get movies rated by sample_users
+        ratings_of_sample_users = self.data[self.data.userId.isin(sample_user_ids)]
+        if not num_movies:
+            return ratings_of_sample_users
+
+        movie_ids = ratings_of_sample_users.movieId.unique()
+        if num_movies >= len(movie_ids):
+            logger.warning("There is not enough movies. Returning %d movies", len(movie_ids))
+            return ratings_of_sample_users
+
+        if more_rated_movies:
+            # More rated movies samples
+            size_most_rated_movies = ratings_of_sample_users.groupby('movieId').size().sort_values(ascending=False).head(num_movies)
+            sample_movie_ids = size_most_rated_movies.index.values
+        else:
+            # Random movie samples
+            sample_movie_ids = random.sample(movie_ids, num_movies)
+
+        ratings = ratings_of_sample_users[ratings_of_sample_users.movieId.isin(sample_movie_ids)]
         return ratings
 
     def getMatrix(self, ratings):
