@@ -1,4 +1,4 @@
-from pandas import read_csv, DataFrame
+from pandas import read_csv, DataFrame, Series
 import numpy as np
 import random
 import logging
@@ -13,7 +13,7 @@ class DatasetGenerator(object):
         if seed:
             random.seed(seed)
 
-    def getOptimusDataset(self, best_users=1000, best_movies=1000):
+    def getOptimumDataset(self, best_users=1000, best_movies=1000):
         # Get the (best_movies) most rated movies
         logger.debug("Filtering %d most rated movies" % best_movies)
         size_most_rated_movies = self.data.groupby('movieId').size().sort_values(ascending=False).head(best_movies)
@@ -33,7 +33,7 @@ class DatasetGenerator(object):
         ratings = self.data[self.data.movieId.isin(most_rated_movies) & self.data.userId.isin(users_with_more_ratings)]
         return ratings
 
-    def getOptimusDatasetPercentage(self, percentage=0.6):
+    def getOptimumDatasetPercentage(self, percentage=0.6):
         def n_samples(samples):
             return int(len(samples) * percentage)
 
@@ -45,7 +45,7 @@ class DatasetGenerator(object):
 
         num_users = n_samples(self.data.userId.unique())
         num_movies = n_samples(self.data.movieId.unique())
-        return self.getOptimusDataset(best_users=num_users, best_movies=num_movies)
+        return self.getOptimumDataset(best_users=num_users, best_movies=num_movies)
 
     def getDatasetPercentage(self, percentage=1):
         def n_samples(samples):
@@ -86,6 +86,72 @@ class DatasetGenerator(object):
 
         ratings = ratings_of_sample_users[ratings_of_sample_users.movieId.isin(sample_movie_ids)]
         return ratings
+
+    def getMostSimilarUsers(self, ratings, user_id, num_users):
+        """
+        Get the $num_users most similars to $user_id in $ratings dataset
+        """
+        distances = self.getDistances(ratings, user_id)
+        similar_users = distances.sort_values().head(num_users).index
+        remaining_dataset = ratings[~ratings.userId.isin(similar_users)]
+        return similar_users, remaining_dataset
+
+    def getMostDisimilarUsers(self, ratings, user_id, num_users):
+        """
+        Get the $num_users most disimilars to $user_id in $ratings dataset
+        """
+        distances = self.getDistances(ratings, user_id)
+        disimilar_users = distances.sort_values(ascending=False).head(num_users).index
+        remaining_dataset = ratings[~ratings.userId.isin(disimilar_users)]
+        return disimilar_users, remaining_dataset
+
+    def getRandomUsers(self, ratings, num_users):
+        user_ids = ratings.userId.unique()
+        if len(user_ids) <= num_users:
+            sample_user_ids = user_ids
+        else:
+            sample_user_ids = random.sample(user_ids, num_users)
+        remaining_dataset = ratings[~ratings.userId.isin(sample_user_ids)]
+        return sample_user_ids, remaining_dataset
+
+    def getGroupUsers(self, ratings, groups):
+        def selectSimilarGroup(ratings, groups):
+            user_ids = ratings.userId.unique()
+            user_id = random.choice(user_ids)
+            num_users = random.choice(groups)
+            return self.getMostSimilarUsers(ratings, user_id, num_users)
+
+        def selectDisimilarGroup(ratings, groups):
+            user_ids = ratings.userId.unique()
+            user_id = random.choice(user_ids)
+            num_users = random.choice(groups)
+            return self.getMostDisimilarUsers(ratings, user_id, num_users)
+
+        def selectRandomGroup(ratings, groups):
+            num_users = random.choice(groups)
+            return self.getRandomUsers(ratings, num_users)
+
+        selectFunctions = [selectSimilarGroup, selectDisimilarGroup, selectRandomGroup]
+
+        remaining_dataset = ratings
+        generated_groups = []
+        while not remaining_dataset.empty:
+            selectFunction = random.choice(selectFunctions)
+            user_groups, remaining_dataset = selectFunction(remaining_dataset, groups)
+            generated_groups.append(user_groups)
+
+        return generated_groups
+
+    def getDistances(self, ratings, user_id):
+        matrix = self.getMatrix(ratings)
+        distances = []
+        users = []
+        for user_idx in matrix.index:
+            distance = abs(matrix.loc[user_idx] - matrix.loc[user_id]).sum()
+            # Save distance between user_idx and user_id
+            distances.append(distance)
+            users.append(user_idx)
+        return Series(distances, index=users)
 
     def getMatrix(self, ratings):
         logger.debug("Creating matrix data")

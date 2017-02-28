@@ -34,7 +34,6 @@ ratings_100 = generator.getDatasetPercentage(percentage=1)
 logger.debug("Stats from dataset 100%")
 stats_100 = generator.getStatsFromDataset(ratings_100)
 
-#plt.hist(stats_100['countRatingsByUsers'])
 logger.debug("Generating dataset 55%")
 ratings_55 = generator.getDatasetPercentage(percentage=0.55)
 
@@ -42,18 +41,18 @@ logger.debug("Generating dataset 30%")
 ratings_30 = generator.getDatasetPercentage(percentage=0.3)
 stats_30 = generator.getStatsFromDataset(ratings_30)
 
-# get optimus dataset 40%
-logger.debug("Generating optimus dataset 40%")
-ratings_opt_40 = generator.getOptimusDatasetPercentage(percentage=0.4)
-logger.debug("Stats from dataset optimus 40%")
+# get optimum dataset 40%
+logger.debug("Generating optimum dataset 40%")
+ratings_opt_40 = generator.getOptimumDatasetPercentage(percentage=0.4)
+logger.debug("Stats from dataset optimum 40%")
 stats_opt_40 = generator.getStatsFromDataset(ratings_opt_40)
 
-# get optimus dataset
+# get optimum dataset
 num_users = 1000
 num_movies = 2000
-logger.debug("Generating optimus dataset users=%d, movies=%d" % (num_users, num_movies))
-ratings_opt = generator.getOptimusDataset(best_users=num_users, best_movies=num_movies)
-logger.debug("Stats from dataset optimus")
+logger.debug("Generating optimum dataset users=%d, movies=%d" % (num_users, num_movies))
+ratings_opt = generator.getOptimumDataset(best_users=num_users, best_movies=num_movies)
+logger.debug("Stats from dataset optimum")
 stats_opt = generator.getStatsFromDataset(ratings_opt)
 
 bins = np.linspace(0, 2500, 100)
@@ -63,6 +62,9 @@ plt.hist(stats_opt_40['countRatingsByUsers'], bins, normed=1, alpha=0.5)
 plt.hist(stats_opt['countRatingsByUsers'], bins, normed=1, alpha=0.5)
 plt.title("Histogram user ratings")
 plt.show()
+
+# Generating groups of users
+groups = generator.getGroupUsers(ratings_opt, [3, 4, 6])
 
 sys.exit(0)
 
