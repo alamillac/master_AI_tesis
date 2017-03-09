@@ -146,10 +146,16 @@ class DatasetGenerator(object):
         matrix = self.getMatrix(ratings)
         distances = []
         users = []
+        num_rated_movies = matrix.loc[user_id].count()
         for user_idx in matrix.index:
-            distance = abs(matrix.loc[user_idx] - matrix.loc[user_id]).sum()
+            common_rated_movies = np.count_nonzero(~(matrix.loc[user_idx].isnull() | matrix.loc[user_id].isnull()))
+            if common_rated_movies:
+                distance = abs(matrix.loc[user_idx] - matrix.loc[user_id]).sum()
+                normalized_distance = distance * num_rated_movies / common_rated_movies
+            else:
+                normalized_distance = np.nan
             # Save distance between user_idx and user_id
-            distances.append(distance)
+            distances.append(normalized_distance)
             users.append(user_idx)
         return Series(distances, index=users)
 

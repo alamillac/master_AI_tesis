@@ -21,25 +21,11 @@ dataFilename = path.join(DATA_DIR, 'ratings.csv')
 logger.debug("Opening database %s" % dataFilename)
 generator = DatasetGenerator(dataFilename, seed=1985)
 
-# Generate test dataset
-logger.debug("Generating test dataset")
-ratings_test = generator.getDataset(16, 10, True)
-rating_test_filename = path.join(DATA_DIR, 'ratings_test.csv')
-logger.debug("Saving test dataset file to %s" % rating_test_filename)
-ratings_test.to_csv(rating_test_filename, index=False)
-
 # get sub datasets
 logger.debug("Generating dataset 100%")
 ratings_100 = generator.getDatasetPercentage(percentage=1)
 logger.debug("Stats from dataset 100%")
 stats_100 = generator.getStatsFromDataset(ratings_100)
-
-logger.debug("Generating dataset 55%")
-ratings_55 = generator.getDatasetPercentage(percentage=0.55)
-
-logger.debug("Generating dataset 30%")
-ratings_30 = generator.getDatasetPercentage(percentage=0.3)
-stats_30 = generator.getStatsFromDataset(ratings_30)
 
 # get optimum dataset 40%
 logger.debug("Generating optimum dataset 40%")
@@ -55,16 +41,18 @@ ratings_opt = generator.getOptimumDataset(best_users=num_users, best_movies=num_
 logger.debug("Stats from dataset optimum")
 stats_opt = generator.getStatsFromDataset(ratings_opt)
 
-bins = np.linspace(0, 2500, 100)
-plt.hist(stats_100['countRatingsByUsers'], bins, normed=1, alpha=0.5)
-plt.hist(stats_30['countRatingsByUsers'], bins, normed=1, alpha=0.5)
-plt.hist(stats_opt_40['countRatingsByUsers'], bins, normed=1, alpha=0.5)
-plt.hist(stats_opt['countRatingsByUsers'], bins, normed=1, alpha=0.5)
-plt.title("Histogram user ratings")
-plt.show()
+#bins = np.linspace(0, 2500, 100)
+#plt.hist(stats_100['countRatingsByUsers'], bins, normed=1, alpha=0.5)
+#plt.hist(stats_opt_40['countRatingsByUsers'], bins, normed=1, alpha=0.5)
+#plt.hist(stats_opt['countRatingsByUsers'], bins, normed=1, alpha=0.5)
+#plt.title("Histogram user ratings")
+#plt.show()
 
 # Generating groups of users
+logger.debug("Generating groups of users [3, 4, 6]")
 groups = generator.getGroupUsers(ratings_opt, [3, 4, 6])
+logger.debug("Generating groups of users [3]")
+groups_3 = generator.getGroupUsers(ratings_opt, [3])
 
 sys.exit(0)
 
