@@ -21,25 +21,25 @@ dataFilename = path.join(DATA_DIR, 'ratings.csv')
 logger.debug("Opening database %s" % dataFilename)
 generator = DatasetGenerator(dataFilename, seed=1985)
 
-# get sub datasets
-logger.debug("Generating dataset 100%")
-ratings_100 = generator.getDatasetPercentage(percentage=1)
-logger.debug("Stats from dataset 100%")
-stats_100 = generator.getStatsFromDataset(ratings_100)
+# Filter dataset. (Remove users with less than 20 ratings)
+logger.debug("Filter dataset")
+ratings = generator.filterDataset()
 
-# get optimum dataset 40%
-logger.debug("Generating optimum dataset 40%")
-ratings_opt_40 = generator.getOptimumDatasetPercentage(percentage=0.4)
-logger.debug("Stats from dataset optimum 40%")
-stats_opt_40 = generator.getStatsFromDataset(ratings_opt_40)
+# Generating groups of users
+group_sizes = [
+    (50, 2),
+    (18, 3),
+    (16, 4),
+    (7, 5),
+    (5, 6),
+    (4, 7)
+]
+for num_groups, size in group_sizes:
+    logger.debug("Generating %d groups of %d users", num_groups, size)
+    groups = generator.getGroupUsers(ratings, num_groups, size)
+    logger.debug(groups)
 
-# get optimum dataset
-num_users = 1000
-num_movies = 2000
-logger.debug("Generating optimum dataset users=%d, movies=%d" % (num_users, num_movies))
-ratings_opt = generator.getOptimumDataset(best_users=num_users, best_movies=num_movies)
-logger.debug("Stats from dataset optimum")
-stats_opt = generator.getStatsFromDataset(ratings_opt)
+sys.exit(0)
 
 #bins = np.linspace(0, 2500, 100)
 #plt.hist(stats_100['countRatingsByUsers'], bins, normed=1, alpha=0.5)
@@ -48,22 +48,15 @@ stats_opt = generator.getStatsFromDataset(ratings_opt)
 #plt.title("Histogram user ratings")
 #plt.show()
 
-# Generating groups of users
-logger.debug("Generating groups of users [3, 4, 6]")
-groups = generator.getGroupUsers(ratings_opt, [3, 4, 6])
-logger.debug("Generating groups of users [3]")
-groups_3 = generator.getGroupUsers(ratings_opt, [3])
-
-sys.exit(0)
 
 # Save it
-rating_min_filename = path.join(DATA_DIR, 'ratings_min.csv')
-logger.debug("Saving file to %s" % rating_min_filename)
-ratings_opt.to_csv(rating_min_filename, index=False)
+#rating_min_filename = path.join(DATA_DIR, 'ratings_min.csv')
+#logger.debug("Saving file to %s" % rating_min_filename)
+#ratings.to_csv(rating_min_filename, index=False)
 
 # Save matrix data
-logger.debug("Generating matrix")
-matrix = generator.getMatrix(ratings_opt)
-matrix_filename = path.join(DATA_DIR, 'matrix.csv')
-logger.debug("Saving matrix file to %s" % matrix_filename)
-matrix.to_csv(matrix_filename)
+#logger.debug("Generating matrix")
+#matrix = generator.getMatrix(ratings)
+#matrix_filename = path.join(DATA_DIR, 'matrix.csv')
+#logger.debug("Saving matrix file to %s" % matrix_filename)
+#matrix.to_csv(matrix_filename)
