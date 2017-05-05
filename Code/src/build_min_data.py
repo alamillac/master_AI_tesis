@@ -2,16 +2,28 @@
 
 from os import path
 from datasetGenerator import DatasetGenerator
+from concensusFn import least_misery
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
 
 import sys
+import signal
 
 logging.basicConfig()
 
 logger = logging.getLogger('build_min_data')
 logger.setLevel(logging.DEBUG)
+
+# Signal handler
+def exit(signum, frame):
+    sig_name = tuple(v for v, k in signal.__dict__.items() if k == signum)[0]
+    logger.warn('Received signal %s', sig_name)
+    sys.exit(0)
+
+for s in [signal.SIGINT, signal.SIGTERM, signal.SIGABRT]:
+    signal.signal(s, exit)
+
 
 CURRENT_DIR = path.dirname(path.abspath(__file__))
 DATA_DIR = path.join(CURRENT_DIR, '..', 'data')
@@ -34,10 +46,16 @@ group_sizes = [
     (5, 6),
     (4, 7)
 ]
+concensus_alg = [{
+    "name": "least_misery",
+    "fn": least_misery
+}]
 for num_groups, size in group_sizes:
     logger.debug("Generating %d groups of %d users", num_groups, size)
-    groups = generator.getGroupUsers(ratings, num_groups, size)
-    logger.debug(groups)
+    for group, group_type in generator.getGroupUsers(ratings, num_groups, size):
+        for concensus_fn_name, evaluation_success, evaluation_unsuccess in generator.evaluateConcensusFns(ratings, group, concensus_alg):
+            # TODO show number of co-rated movies
+            logger.debug("Group_size: %d, Group_type: %s, Concensus_alg: %s, Success: %.2f%%, Unsuccess: %.2f%%", size, group_type, concensus_fn_name, evaluation_success, evaluation_unsuccess)
 
 sys.exit(0)
 

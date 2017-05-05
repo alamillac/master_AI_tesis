@@ -1,4 +1,5 @@
 from pandas import read_csv, DataFrame, Series
+from errors import InvalidGroupError, MaxInvalidIterationsError
 import numpy as np
 import random
 import logging
@@ -113,7 +114,7 @@ class DatasetGenerator(object):
         distances = self.getDistances(ratings, user_id)
         similar_users = distances.sort_values().head(num_users).index
         if len(self.getCoRatedMovies(ratings, similar_users)) < 10:
-            raise Exception("Invalid group")
+            raise InvalidGroupError()
         return similar_users
 
     def getMostDisimilarUsers(self, ratings, user_id, num_users):
@@ -124,7 +125,7 @@ class DatasetGenerator(object):
         distances = self.getDistances(ratings, user_id)
         disimilar_users = distances.sort_values(ascending=False).head(num_users).index
         if len(self.getCoRatedMovies(ratings, disimilar_users)) < 10:
-            raise Exception("Invalid group")
+            raise InvalidGroupError()
         return disimilar_users
 
     def getRandomUsers(self, ratings, num_users):
@@ -136,25 +137,24 @@ class DatasetGenerator(object):
             sample_user_ids = random.sample(user_ids, num_users)
 
         if len(self.getCoRatedMovies(ratings, sample_user_ids)) < 10:
-            raise Exception("Invalid group")
+            raise InvalidGroupError()
         return sample_user_ids
 
     def getGroupUsersFn(self, ratings, num_groups, size, selectFunction):
         remaining_dataset = ratings
-        generated_groups = []
+        num_generated_groups = 0
         num_invalid = 0
-        while len(generated_groups) < num_groups:
+        while num_generated_groups < num_groups:
             try:
                 group = selectFunction(remaining_dataset, size)
-                generated_groups.append(group)
+                num_generated_groups += 1
                 remaining_dataset = remaining_dataset[~remaining_dataset.userId.isin(group)]
-            except:
+                yield group
+            except InvalidGroupError:
                 num_invalid += 1
                 logger.warning("Invalid group iteration %d", num_invalid)
                 if num_invalid > 10:
-                    raise Exception("Max invalid iterations")
-
-        return generated_groups
+                    raise MaxInvalidIterationsError()
 
     def getGroupUsers(self, ratings, num_groups, size):
         def reduceRatings(ratings, user_id):
@@ -185,11 +185,14 @@ class DatasetGenerator(object):
             reduced_ratings = reduceRatings(ratings, user_id)
             return self.getRandomUsers(reduced_ratings, num_users)
 
-        return {
-            'similar': self.getGroupUsersFn(ratings, num_groups, size, selectSimilarGroup),
-            'disimilar': self.getGroupUsersFn(ratings, num_groups, size, selectDisimilarGroup),
-            'random': self.getGroupUsersFn(ratings, num_groups, size, selectRandomGroup)
-        }
+        for group in self.getGroupUsersFn(ratings, num_groups, size, selectSimilarGroup):
+            yield group, 'similar'
+
+        for group in self.getGroupUsersFn(ratings, num_groups, size, selectDisimilarGroup):
+            yield group, 'disimilar'
+
+        for group in self.getGroupUsersFn(ratings, num_groups, size, selectRandomGroup):
+            yield group, 'random'
 
     def filterCoRatedMovies(self, ratings, user_id):
         movies_rated_by_user = ratings[ratings.userId.isin([user_id])].movieId.unique()
@@ -256,3 +259,37 @@ class DatasetGenerator(object):
             "histRatingsByUsers": np.histogram(count_ratings_by_users),
             "histRatingsByMovies": np.histogram(count_ratings_by_movies)
         }
+
+    def evaluateConcensusFns(self, ratings, group, concensusFns, n_success=3):
+        def successN(model1, model2, n):
+            n_movies1_id = set(model1.sort_values(ascending=False).head(n).index)
+            n_movies2_id = set(model2.sort_values(ascending=False).head(n).index)
+            return 1 if len(n_movies1_id.intersection(n_movies2_id)) > 0 else 0
+
+        def unsuccessN(model1, model2, n):
+            n_movies1_id = set(model1.sort_values(ascending=False).head(n).index)
+            n_movies2_id = set(model2.sort_values(ascending=False).tail(n).index)
+            return 1 if len(n_movies1_id.intersection(n_movies2_id)) > 0 else 0
+
+        def evaluate(concensusFn, group_matrix):
+            concensus_model = concensusFn(group_matrix)
+            success_array = []
+            unsuccess_array = []
+            for i in range(group_matrix.shape[0]):
+                user_model = group_matrix.iloc[i]
+                success_array.append(
+                    successN(concensus_model, user_model, n_success)
+                )
+                unsuccess_array.append(
+                    unsuccessN(concensus_model, user_model, n_success)
+                )
+
+            return np.mean(success_array) * 100, np.mean(unsuccess_array) * 100
+
+        # Filter ratings to only co-rated movies by all users in group
+        co_rated_movies = self.getCoRatedMovies(ratings, group)
+        group_ratings = ratings[ratings.movieId.isin(co_rated_movies) & ratings.userId.isin(group)]
+        group_matrix = self.getMatrix(group_ratings)
+        for concensusObj in concensusFns:
+            evaluation_success, evaluation_unsuccess = evaluate(concensusObj['fn'], group_matrix)
+            yield concensusObj['name'], evaluation_success, evaluation_unsuccess
