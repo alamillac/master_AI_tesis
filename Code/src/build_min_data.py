@@ -2,7 +2,7 @@
 
 from os import path
 from datasetGenerator import DatasetGenerator
-from concensusFn import least_misery
+from concensusFn import least_misery, mean
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
@@ -47,8 +47,11 @@ group_sizes = [
     (4, 7)
 ]
 concensus_alg = [{
-    "name": "least_misery",
+    "name": "Least misery",
     "fn": least_misery
+}, {
+    "name": "Mean",
+    "fn": mean
 }]
 for num_groups, size in group_sizes:
     logger.debug("Generating %d groups of %d users", num_groups, size)
