@@ -147,13 +147,14 @@ class DatasetGenerator(object):
         while num_generated_groups < num_groups:
             try:
                 group = selectFunction(remaining_dataset, size)
+                num_invalid = 0
                 num_generated_groups += 1
                 remaining_dataset = remaining_dataset[~remaining_dataset.userId.isin(group)]
                 yield group
             except InvalidGroupError:
                 num_invalid += 1
                 logger.warning("Invalid group iteration %d", num_invalid)
-                if num_invalid > 10:
+                if num_invalid > 20:
                     raise MaxInvalidIterationsError()
 
     def getGroupUsers(self, ratings, num_groups, size):

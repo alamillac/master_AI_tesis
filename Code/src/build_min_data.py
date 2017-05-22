@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 
+import json
 from os import path
 from datasetGenerator import DatasetGenerator
-from concensusFn import least_misery, mean
+from concensusFn import least_misery, mean, multiplicative, most_pleasure
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
 
 import sys
 import signal
+
+CURRENT_DIR = path.dirname(path.abspath(__file__))
+DIR_CACHE_MODELS = path.join(CURRENT_DIR, 'cache')
 
 logging.basicConfig()
 
@@ -46,19 +50,39 @@ group_sizes = [
     (5, 6),
     (4, 7)
 ]
+groups = []
+for num_groups, size in group_sizes:
+    logger.debug("Generating %d groups of %d users", num_groups, size)
+    for group, group_type in generator.getGroupUsers(ratings, num_groups, size):
+        logger.debug("Group generated: %s -> %d", group_type, len(group))
+        groups.append((group, group_type))
+
+# Save groups in cache
+logger.debug("Saving groups in cache")
+groups_cache_file = path.join(DIR_CACHE_MODELS, 'groups.json')
+with open(groups_cache_file, 'w') as f:
+    json.dump(groups, f, indent=4)
+logger.debug("Groups saved in %s", groups_cache_file)
+
+
+# Evaluate concensus algorithms
 concensus_alg = [{
     "name": "Least misery",
     "fn": least_misery
 }, {
     "name": "Mean",
     "fn": mean
+}, {
+    "name": "Multiplicative",
+    "fn": multiplicative
+}, {
+    "name": "Most pleasure",
+    "fn": most_pleasure
 }]
-for num_groups, size in group_sizes:
-    logger.debug("Generating %d groups of %d users", num_groups, size)
-    for group, group_type in generator.getGroupUsers(ratings, num_groups, size):
-        for concensus_fn_name, evaluation_success, evaluation_unsuccess in generator.evaluateConcensusFns(ratings, group, concensus_alg):
-            # TODO show number of co-rated movies
-            logger.debug("Group_size: %d, Group_type: %s, Concensus_alg: %s, Success: %.2f%%, Unsuccess: %.2f%%", size, group_type, concensus_fn_name, evaluation_success, evaluation_unsuccess)
+for group, group_type in groups:
+    for concensus_fn_name, evaluation_success, evaluation_unsuccess in generator.evaluateConcensusFns(ratings, group, concensus_alg):
+        # TODO show number of co-rated movies
+        logger.debug("Group_size: %d, Group_type: %s, Concensus_alg: %s, Success: %.2f%%, Unsuccess: %.2f%%", size, group_type, concensus_fn_name, evaluation_success, evaluation_unsuccess)
 
 sys.exit(0)
 
