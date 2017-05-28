@@ -42,30 +42,48 @@ logger.debug("Filter dataset")
 ratings = generator.filterDataset()
 
 # Generating groups of users
-group_sizes = [
-    (50, 2),
-    (18, 3),
-    (16, 4),
-    (7, 5),
-    (5, 6),
-    (4, 7)
-]
-groups = []
-for num_groups, size in group_sizes:
-    logger.debug("Generating %d groups of %d users", num_groups, size)
-    for group, group_type in generator.getGroupUsers(ratings, num_groups, size):
-        logger.debug("Group generated: %s -> %d", group_type, len(group))
-        groups.append((group, group_type))
+def get_groups(generator, ratings):
+    groups_cache_file = path.join(DIR_CACHE_MODELS, 'groups.json')
+    # Read grops from cache
+    try:
+        with open(groups_cache_file) as f:
+            groups = json.load(f)
 
-# Save groups in cache
-logger.debug("Saving groups in cache")
-groups_cache_file = path.join(DIR_CACHE_MODELS, 'groups.json')
-with open(groups_cache_file, 'w') as f:
-    json.dump(groups, f, indent=4)
-logger.debug("Groups saved in %s", groups_cache_file)
+        logger.debug("Groups read from cache")
+        return groups
+    except:
+        pass
 
+    group_sizes = [
+        (50, 2),
+        (18, 3),
+        (16, 4),
+        (7, 5),
+        (5, 6),
+        (4, 7)
+    ]
+    groups = []
+    for num_groups, size in group_sizes:
+        logger.debug("Generating %d groups of %d users", num_groups, size)
+        for group, group_type in generator.getGroupUsers(ratings, num_groups, size):
+            logger.debug("Group generated: %s -> %d", group_type, len(group))
+            groups.append((group.tolist(), group_type))
+
+    # Save groups in cache
+    logger.debug("Saving groups in cache")
+    try:
+        with open(groups_cache_file, 'w') as f:
+            json.dump(groups, f, indent=4)
+    except:
+        logger.debug("Groups couldn't be saved in cache")
+
+    logger.debug("Groups saved in %s", groups_cache_file)
+    return groups
+
+groups = get_groups(generator, ratings)
 
 # Evaluate concensus algorithms
+results = []
 concensus_alg = [{
     "name": "Least misery",
     "fn": least_misery
@@ -79,10 +97,76 @@ concensus_alg = [{
     "name": "Most pleasure",
     "fn": most_pleasure
 }]
+group_sizes = set()
 for group, group_type in groups:
     for concensus_fn_name, evaluation_success, evaluation_unsuccess in generator.evaluateConcensusFns(ratings, group, concensus_alg):
         # TODO show number of co-rated movies
-        logger.debug("Group_size: %d, Group_type: %s, Concensus_alg: %s, Success: %.2f%%, Unsuccess: %.2f%%", size, group_type, concensus_fn_name, evaluation_success, evaluation_unsuccess)
+        logger.debug("Group_size: %d, Group_type: %s, Concensus_alg: %s, Success: %.2f%%, Unsuccess: %.2f%%", len(group), group_type, concensus_fn_name, evaluation_success, evaluation_unsuccess)
+        group_sizes.add(len(group))
+        results.append({
+            "concensus_name": concensus_fn_name,
+            "success_value": evaluation_success,
+            "unsuccess_value": evaluation_unsuccess,
+            "group_type": group_type,
+            "group_size": len(group)
+        })
+
+
+# Process results
+def filter_results(results, value_type, group_size, concensus_name, group_type):
+    return [result[value_type] for result in results if result['group_size'] == group_size and result['concensus_name'] == concensus_name and result['group_type'] == group_type]
+
+def mean_and_std(values):
+    return np.mean(values), np.std(values)
+
+import ipdb; ipdb.set_trace()  # BREAKPOINT
+graphs = []
+for value_type in ["success_value", "unsuccess_value"]:
+    for group_size in group_sizes:
+        # Filter success values with group_size
+        graph_info = []
+        for concensus in concensus_alg:
+            means_values = []
+            std_values = []
+            for group_type in ["similar", "random", "disimilar"]:
+                mean_result, std_result = mean_and_std(filter_results(results, value_type, group_size, concensus['name'], group_type))
+                means_values.append(mean_result)
+                std_values.append(std_result)
+
+            graph_info.append({
+                'label': concensus['name'],
+                'means': means_values,
+                'std': std_values
+            })
+        graphs.append({
+            'data': graph_info,
+            'group_size': group_size,
+            'value_type': "Success" if value_type == "success_value" else "Unsuccess"
+        })
+
+
+# Plot results
+full_bar_width = 0.7
+bar_width = full_bar_width / len(concensus_alg)
+opacity = 0.4
+error_config = {'ecolor': '0.3'}
+
+for graph in graphs:
+    logger.debug("Show graph: %s group %d", graph['value_type'], graph['group_size'])
+    i = 0
+    for plot in graph['data']:
+        index = np.arange(len(plot['means'])) #similar, random and disimilar
+        plt.bar(index + (i * bar_width), plot['means'], bar_width, alpha=opacity, yerr=plot['std'], error_kw=error_config, label=plot['label'])
+        i += 1
+
+    plt.xlabel('Groups')
+    plt.ylabel(graph['value_type'])
+    plt.title('%s group %d' % (graph['value_type'], graph['group_size']))
+    plt.xticks(index + (bar_width * len(concensus_alg) / 2), ('Similar', 'Random', 'Disimilar'))
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
 
 sys.exit(0)
 
