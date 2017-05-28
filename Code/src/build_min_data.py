@@ -3,7 +3,7 @@
 import json
 from os import path
 from datasetGenerator import DatasetGenerator
-from concensusFn import least_misery, mean, multiplicative, most_pleasure
+from concensusFn import least_misery, mean, multiplicative, most_pleasure, borda_count, purity
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
@@ -97,6 +97,12 @@ concensus_alg = [{
 }, {
     "name": "Most pleasure",
     "fn": most_pleasure
+}, {
+    "name": "Purity",
+    "fn": purity
+}, {
+    "name": "Borda count",
+    "fn": borda_count
 }]
 group_sizes = set()
 for group, group_type in groups:
