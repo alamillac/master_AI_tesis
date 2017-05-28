@@ -31,6 +31,7 @@ for s in [signal.SIGINT, signal.SIGTERM, signal.SIGABRT]:
 
 CURRENT_DIR = path.dirname(path.abspath(__file__))
 DATA_DIR = path.join(CURRENT_DIR, '..', 'data')
+RESULTS_DIR = path.join(CURRENT_DIR, '..', 'results')
 
 dataFilename = path.join(DATA_DIR, 'ratings.csv')
 
@@ -119,7 +120,6 @@ def filter_results(results, value_type, group_size, concensus_name, group_type):
 def mean_and_std(values):
     return np.mean(values), np.std(values)
 
-import ipdb; ipdb.set_trace()  # BREAKPOINT
 graphs = []
 for value_type in ["success_value", "unsuccess_value"]:
     for group_size in group_sizes:
@@ -165,7 +165,9 @@ for graph in graphs:
     plt.xticks(index + (bar_width * len(concensus_alg) / 2), ('Similar', 'Random', 'Disimilar'))
     plt.legend()
     plt.tight_layout()
-    plt.show()
+    #plt.show()
+    imagefilename = "{}_{}.png".format(graph['value_type'], graph['group_size'])
+    plt.savefig(path.join(RESULTS_DIR, imagefilename))
 
 
 sys.exit(0)

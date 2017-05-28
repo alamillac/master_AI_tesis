@@ -186,14 +186,23 @@ class DatasetGenerator(object):
             reduced_ratings = reduceRatings(ratings, user_id)
             return self.getRandomUsers(reduced_ratings, num_users)
 
-        for group in self.getGroupUsersFn(ratings, num_groups, size, selectSimilarGroup):
-            yield group, 'similar'
+        try:
+            for group in self.getGroupUsersFn(ratings, num_groups, size, selectSimilarGroup):
+                yield group, 'similar'
+        except:
+            logger.warning("Max iteration errors")
 
-        for group in self.getGroupUsersFn(ratings, num_groups, size, selectDisimilarGroup):
-            yield group, 'disimilar'
+        try:
+            for group in self.getGroupUsersFn(ratings, num_groups, size, selectDisimilarGroup):
+                yield group, 'disimilar'
+        except:
+            logger.warning("Max iteration errors")
 
-        for group in self.getGroupUsersFn(ratings, num_groups, size, selectRandomGroup):
-            yield group, 'random'
+        try:
+            for group in self.getGroupUsersFn(ratings, num_groups, size, selectRandomGroup):
+                yield group, 'random'
+        except:
+            logger.warning("Max iteration errors")
 
     def filterCoRatedMovies(self, ratings, user_id):
         movies_rated_by_user = ratings[ratings.userId.isin([user_id])].movieId.unique()
