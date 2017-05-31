@@ -68,7 +68,7 @@ def get_groups(generator, ratings):
         logger.debug("Generating %d groups of %d users", num_groups, size)
         for group, group_type in generator.getGroupUsers(ratings, num_groups, size):
             logger.debug("Group generated: %s -> %d", group_type, len(group))
-            groups.append((group.tolist(), group_type))
+            groups.append((group, group_type))
 
     # Save groups in cache
     logger.debug("Saving groups in cache")
@@ -147,7 +147,7 @@ for value_type in ["success_value", "unsuccess_value"]:
         graphs.append({
             'data': graph_info,
             'group_size': group_size,
-            'value_type': "Success" if value_type == "success_value" else "Unsuccess"
+            'value_type': "Success 3" if value_type == "success_value" else "Unsuccess 3"
         })
 
 
@@ -174,6 +174,7 @@ for graph in graphs:
     #plt.show()
     imagefilename = "{}_{}.png".format(graph['value_type'], graph['group_size'])
     plt.savefig(path.join(RESULTS_DIR, imagefilename))
+    plt.clf()
 
 
 sys.exit(0)

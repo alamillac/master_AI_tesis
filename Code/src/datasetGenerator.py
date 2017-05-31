@@ -115,7 +115,7 @@ class DatasetGenerator(object):
         similar_users = distances.sort_values().head(num_users).index
         if len(self.getCoRatedMovies(ratings, similar_users)) < 10:
             raise InvalidGroupError()
-        return similar_users
+        return list(similar_users)
 
     def getMostDisimilarUsers(self, ratings, user_id, num_users):
         """
@@ -126,7 +126,7 @@ class DatasetGenerator(object):
         disimilar_users = distances.sort_values(ascending=False).head(num_users).index
         if len(self.getCoRatedMovies(ratings, disimilar_users)) < 10:
             raise InvalidGroupError()
-        return disimilar_users
+        return list(disimilar_users)
 
     def getRandomUsers(self, ratings, num_users):
         logger.debug("Getting %d random users", num_users)
@@ -138,7 +138,7 @@ class DatasetGenerator(object):
 
         if len(self.getCoRatedMovies(ratings, sample_user_ids)) < 10:
             raise InvalidGroupError()
-        return sample_user_ids
+        return list(sample_user_ids)
 
     def getGroupUsersFn(self, ratings, num_groups, size, selectFunction):
         remaining_dataset = ratings
